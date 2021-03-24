@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Document</title>
+
+    <script src="vue.js"></script>
+</head>
+
+<body>
+    <div id="app">
+        <div class="grid">
+            <div>
+                <h1>図書管理</h1>
+                <div class="book">
+                    <div><label for="id">
+                            No.：
+                        </label> <input type="text" id="id" v-focus v-model.number="order" :disabled="flag"> <label
+                            for="name">
+                            名称：
+                        </label> <input type="text" id="name" v-model="uname"> <button @click="submit"
+                            :disabled="submitFlag">追加</button></div>
+                </div>
+            </div>
+            <div class="total"><span>図書総数</span>{{total}}</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>No.</th>
+                        <th>名称</th>
+                        <th>時間</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="(item,index) in books" :key='item.id'>
+                        <td>{{item.id}}</td>
+                        <td>{{item.name}}</td>
+                        <td>{{item.date | format("yyyy-MM-dd hh:mm:ss")}}</td>
+                        <td>
+                            <a href="" @click.prevent='editTxt(item.id)'>変更</a>
+                            <a href="" @click.prevent='del(item.id)'>削除</a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script type="text/javascript" src="js/vue.js"></script>
+    <script type="text/javascript">
+        /*
+  图书管理-图书列表展示功能
+  注意事项：<a href="" @click.prevent>修改</a>
+  事件绑定时，可以只添加修饰符，而不绑定事件函数
+*/
+        Vue.filter('format', function (value, arg) {
+            function dateFormat(date, format) {
+                if (typeof date === "string") {
+                    var mts = date.match(/(\/Date\((\d+)\)\/)/);
+                    if (mts && mts.length >= 3) {
+                        date = parseInt(mts[2]);
+                    }
+                }
+                date = new Date(date);
+                if (!date || date.toUTCString() == "Invalid Date") {
+                    return "";
+                }
+                var map = {
+                    "M": date.getMonth() + 1, //月份 
+                    "d": date.getDate(), //日 
+                    "h": date.getHours(), //小时 
+                    "m": date.getMinutes(), //分 
+                    "s": date.getSeconds(), //秒 
+                    "q": Math.floor((date.getMonth() + 3) / 3), //季度 
+                    "S": date.getMilliseconds() //毫秒 
+                };
+                format = format.replace(/([yMdhmsqS])+/g, function (all, t) {
+                    var v = map[t];
+                    if (v !== undefined) {
+                        if (all.length > 1) {
+                            v = '0' + v;
+                            v = v.substr(v.length - 2);
+                        }
+                        return v;
+                    } else if (t === 'y') {
+                        return (date.getFullYear() + '').substr(4 - all.length);
+                    }
+                    return all;
+                });
+                return format;
+            }
+            return dateFormat(value, arg);
+        })
+        var vm = new Vue({
+            el: '#app',
+            data: {
+                order: '',
+                uname: '',
+                submitFlag: false,//提交按钮是否可点击
+                flag: false,//id是否可更改 判断是添加还是修改
+                books: []
+            },
+            // 自定义局部指令
+            directives: {//自定义局部指令  获取焦点
+                focus: {
+                    inserted: function (el) {
+                        el.focus();
+                    }
+                }
+            },
+            // 方法
+            methods: {
+                submit() {//添加图书  编辑图书
+                    if (this.flag) {
+                        // 编辑图书
+                        // 就是根据当前的ID去更新数组中对应的数据
+                        // some() 方法用于检测数组中的元素是否满足指定条件（函数提供）。
+                        this.books.some((item) => {
+                            if (item.id == this.order) {
+                                item.date = +new Date();
+                                item.name = this.uname;
+                                // 完成更新操作之后，需要终止循环
+                                return true;
+                            }
+                        });
+                        this.flag = false;
+                    } else {
+                        // 添加图书
+                        if (this.order != '' && this.uname != '') {
+                            let book = {};
+                            book.id = this.order;
+                            book.name = this.uname;
+                            book.date = +new Date();
+                            this.books.push(book);
+                        } else {
+                            alert("请补全填写图书信息");
+                        }
+                    }
+                    // 清空表单
+                    this.order = '';
+                    this.uname = '';
+                },
+                editTxt(id) {//修改图书
+                    this.flag = true;
+                    //获取图书
+                    var book = this.books.filter(function (item) {
+                        return item.id == id;
+                    });
+                    this.order = book[0].id;
+                    this.uname = book[0].name;
+                },
+                del(id) {//删除图书
+                    //方法一： 通过filter()方法进行删除
+                    // this.books=this.books.filter(function(item){
+                    // 	return item.id != id;
+                    // })
+                    // 方法二：根据id从数组中找到元素的索引 通过 splice()方法删除
+                    var index = this.books.findIndex(function (item) {
+                        return item.id == id;
+                    })
+                    this.books.splice(index, 1)
+                },
+                test(val) {
+                    console.log(val);//监听的值
+                    let flag = this.books.some(function (item) {
+                        console.log(item);//监听数组中的每个对象
+                        return item.name == val;
+                    })
+                    if (flag) {
+                        // 存在
+                        this.submitFlag = true;
+                    } else {
+                        this.submitFlag = false;
+                    }
+                },
+            },
+            // 计算属性
+            computed: {
+                total: function () {
+                    return this.books.length;
+                }
+            },
+            // 侦听  
+            watch: {
+                // 验证图书是否存在
+                uname: function (val) {
+                    this.test(val);
+                },
+            },
+            // 该生命周期钩子函数被触发的时候 模板已经可以使用了
+            // 一般此时用于获取后台数据 然后把数据填充到模板
+            mounted: function () {
+                var data = [{
+                    id: 1,
+                    name: 'スクラムの入門',
+                    date: 2525609975000
+                }, {
+                    id: 2,
+                    name: 'アジャイル開発',
+                    date: 2525609975000
+                }, {
+                    id: 3,
+                    name: 'Vue.jsの独学',
+                    date: 2525609975000
+                }, {
+                    id: 4,
+                    name: 'リーダブルコード',
+                    date: 2525609975000
+                }];
+                this.books = data;
+            }
+        });
+    </script>
+
+
+    <style type="text/css">
+        .grid {
+            margin: auto;
+            width: 800px;
+            text-align: center;
+        }
+
+        .grid table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .grid th,
+        td {
+            padding: 10;
+            border: 1px dashed pink;
+            height: 35px;
+            line-height: 60px;
+        }
+
+        .grid th {
+            background-color: pink;
+        }
+
+        .book {
+            background: pink;
+            padding: 10px;
+            border-bottom: 1px double green;
+        }
+
+        .total {
+            width: 100%;
+            height: 30px;
+            line-height: 30px;
+            background: hotpink;
+            border-bottom: 1px solid green;
+        }
+    </style>
+</body>
+
+</html>
